@@ -617,16 +617,5 @@ are complete.
 
 ------------------------------------------------------------------------
 
-## Project Reference
 
-Project scope and milestones are based on the supplied **PROJECT.pdf**,
-Project 3: "LedgerGuard: Dynamic Multi-Tenant Zero-Knowledge Billing
-Engine" (pages 4--6).
-
-------------------------------------------------------------------------
-
-## License
-
-No license has been specified for this project. Add a license after
-confirming the repository owner's intended terms.
 
