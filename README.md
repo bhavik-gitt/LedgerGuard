@@ -1,4 +1,4 @@
-"# LedgerGuard" 
+
 # LedgerGuard --- Backend Development Roadmap
 
 > **Project:** LedgerGuard --- Dynamic Multi-Tenant Zero-Knowledge
