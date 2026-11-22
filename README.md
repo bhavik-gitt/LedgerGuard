@@ -1,213 +1,151 @@
+# LedgerGuard: Backend Development Roadmap
 
-# LedgerGuard --- Backend Development Roadmap
+| | |
+|---|---|
+| **Project** | LedgerGuard: Dynamic Multi-Tenant Zero-Knowledge Billing Engine |
+| **Role** | Backend Developer |
+| **Working branch** | `backend` |
+| **Stack** | Node.js, Express.js, MongoDB, Mongoose, Redis, JWT, RSA-256 |
+| **Duration** | 4-week implementation plan with a mid-project and a final review |
+| **Document status** | Living roadmap. Update as implementation decisions are finalized. |
 
-> **Project:** LedgerGuard --- Dynamic Multi-Tenant Zero-Knowledge
-> Billing Engine\
-> **Role:** Backend Developer\
-> **Backend branch:** `backend`\
-> **Stack:** Node.js, Express.js, MongoDB, Mongoose, Redis, JWT,
-> RSA-256\
-> **Project duration:** 4-week implementation plan
+---
 
-------------------------------------------------------------------------
+## Table of Contents
+
+1. [Project Overview](#1-project-overview)
+2. [Ownership and Responsibilities](#2-ownership-and-responsibilities)
+3. [Technology Stack](#3-technology-stack)
+4. [Backend Architecture](#4-backend-architecture)
+5. [Folder Structure](#5-folder-structure)
+6. [Implementation Roadmap](#6-implementation-roadmap)
+7. [Proposed API Contract](#7-proposed-api-contract)
+8. [Data Model Planning](#8-data-model-planning)
+9. [Security Checklist](#9-security-checklist)
+10. [Testing and Performance Validation](#10-testing-and-performance-validation)
+11. [Git Workflow](#11-git-workflow)
+12. [Local Setup](#12-local-setup)
+13. [Frontend Integration](#13-frontend-integration)
+14. [Deliverables and Review Preparation](#14-deliverables-and-review-preparation)
+15. [Working Principles](#15-working-principles)
+16. [Progress Tracker](#16-progress-tracker)
+17. [Scope Notes and Open Decisions](#17-scope-notes-and-open-decisions)
+18. [Reference Documents](#18-reference-documents)
+
+---
 
 ## 1. Project Overview
 
-LedgerGuard is a multi-tenant billing backend designed to keep each
-organization's data isolated and to make billing transactions reliable,
-even when requests are repeated or a network failure occurs.
+LedgerGuard is a multi-tenant billing backend. It keeps each organization's data isolated and makes billing transactions reliable, even when requests are repeated or a network failure occurs.
 
-The backend must:
+### Backend objectives
 
-1.  Authenticate incoming requests and identify the organization
-    (tenant).
-2.  Route each request to the correct tenant database connection.
-3.  Keep tenant data isolated from every other tenant.
-4.  Prevent duplicate billing operations using idempotency controls.
-5.  Use Redis distributed locks and MongoDB transactions to protect
-    ledger updates.
-6.  Provide usage and cost analytics through MongoDB aggregation
-    queries.
-7.  Validate request authenticity using RSA-256 asymmetric cryptography.
-8.  Expose documented REST APIs and support the frontend dashboard.
+1. Authenticate incoming requests and identify the organization (tenant).
+2. Route each request to the correct tenant database connection.
+3. Keep tenant data isolated from every other tenant.
+4. Prevent duplicate billing operations through idempotency controls.
+5. Protect ledger updates with Redis distributed locks and MongoDB transactions.
+6. Provide usage and cost analytics through MongoDB aggregation queries.
+7. Validate request authenticity using RSA-256 asymmetric cryptography.
+8. Expose documented REST APIs that support the frontend dashboard.
 
-### Main use case
+### Primary use case
 
-Company A and Company B use LedgerGuard at the same time. The API
-gateway identifies the organization from a verified JWT and routes the
-request to that organization's isolated database. If a billing request
-is retried or a network timeout occurs, idempotency controls, Redis
-locks, and MongoDB transactions help prevent duplicate charges and
-inconsistent ledger records.
+Company A and Company B use LedgerGuard at the same time. The API gateway identifies each organization from a verified JWT and routes the request to that organization's isolated database. If a billing request is retried or a network timeout occurs, idempotency controls, Redis locks, and MongoDB transactions prevent duplicate charges and inconsistent ledger records.
 
-------------------------------------------------------------------------
+---
 
-## 2. My Role and Ownership
+## 2. Ownership and Responsibilities
 
-I am responsible for the server-side implementation. My work includes
-the following modules.
+The backend developer owns the server-side implementation.
 
-  -----------------------------------------------------------------------
-  Module                              My responsibility
-  ----------------------------------- -----------------------------------
-  API Gateway                         Build Express middleware and routes
-                                      that authenticate requests and
-                                      identify tenants.
+| Module | Responsibility |
+|---|---|
+| **API Gateway** | Build Express middleware and routes that authenticate requests and identify tenants |
+| **Authentication** | Verify JWTs and enforce authorization on protected endpoints |
+| **Tenant Database Pool** | Create, cache, select, and safely manage tenant-specific Mongoose connections |
+| **Billing Ledger** | Store billing events and ledger entries with reliable transaction handling |
+| **Idempotency** | Detect repeated requests using unique event or request IDs |
+| **Redis Locks** | Prevent conflicting operations from running simultaneously where required |
+| **MongoDB Transactions** | Make related ledger writes atomic and roll back failed operations |
+| **Analytics** | Build aggregation pipelines for usage and cost metrics over historical ranges |
+| **Cryptographic Security** | Validate signed requests and payloads using RSA-256 |
+| **API Integration** | Agree on request and response contracts with the frontend developer |
+| **Testing** | Write unit, integration, security, and failure-case tests |
+| **Documentation** | Maintain setup instructions, environment variables, API docs, and progress notes |
 
-  Authentication                      Verify JWTs and enforce
-                                      authorization for protected
-                                      endpoints.
+> **Boundary:** The frontend dashboard is outside primary backend ownership. The backend provides stable APIs and coordinates with the frontend developer on payload formats, authentication, and error handling.
 
-  Tenant Database Pool                Create, cache, select, and safely
-                                      manage tenant-specific Mongoose
-                                      connections.
-
-  Billing Ledger                      Store billing events and ledger
-                                      entries with reliable transaction
-                                      handling.
-
-  Idempotency                         Detect repeated requests using
-                                      unique event/request IDs.
-
-  Redis Locks                         Prevent conflicting operations from
-                                      executing simultaneously where
-                                      required.
-
-  MongoDB Transactions                Make related ledger writes atomic
-                                      and roll back failed operations.
-
-  Analytics                           Build aggregation pipelines for
-                                      usage and cost metrics over
-                                      historical time ranges.
-
-  Cryptographic Security              Validate signed requests/payloads
-                                      using RSA-256 as required by the
-                                      project.
-
-  API Integration                     Agree on request/response contracts
-                                      with the frontend developer.
-
-  Testing                             Write unit, integration, security,
-                                      and failure-case tests.
-
-  Documentation                       Maintain setup instructions,
-                                      environment variable documentation,
-                                      API documentation, and progress
-                                      notes.
-  -----------------------------------------------------------------------
-
-**Important:** The frontend dashboard is outside my primary ownership. I
-will provide stable APIs and coordinate with the frontend developer on
-payload formats, authentication, errors, and integration.
-
-------------------------------------------------------------------------
+---
 
 ## 3. Technology Stack
 
-  -----------------------------------------------------------------------
-  Technology                          How I will use it
-  ----------------------------------- -----------------------------------
-  Node.js                             JavaScript runtime for the backend.
+| Technology | Usage |
+|---|---|
+| Node.js | Backend runtime |
+| Express.js | REST API server, routing, and middleware |
+| MongoDB | Tenant data, billing events, ledger entries, and usage records |
+| Mongoose | Schemas, indexes, validation, and tenant-specific connections |
+| Redis | Distributed locks and supporting idempotency coordination |
+| JWT | Request authentication and tenant identification |
+| RSA-256 | Asymmetric signature validation for protected requests |
+| Jest | Unit and integration testing |
+| Supertest | Express endpoint testing |
+| dotenv | Local environment configuration |
+| Git and GitHub | Branch-based collaboration and version control |
 
-  Express.js                          REST API server, routing, and
-                                      middleware.
+**Conventions:** use `async`/`await` for all database, Redis, and network operations; separate modules by responsibility; use JSON for all REST communication.
 
-  MongoDB                             Store tenant data, billing events,
-                                      ledger entries, and usage records.
+---
 
-  Mongoose                            Define schemas, indexes,
-                                      validation, and tenant-specific
-                                      connections.
+## 4. Backend Architecture
 
-  Redis                               Distributed locks and supporting
-                                      idempotency coordination.
-
-  JWT                                 Authenticate requests and identify
-                                      the organization/tenant.
-
-  RSA-256                             Asymmetric signature validation for
-                                      protected API requests.
-
-  Jest                                Unit and integration test
-                                      framework.
-
-  Supertest                           Test Express endpoints.
-
-  dotenv                              Load local environment
-                                      configuration.
-
-  Git and GitHub                      Branch-based collaboration and
-                                      version control.
-  -----------------------------------------------------------------------
-
-Use asynchronous code (`async`/`await`) for database, Redis, and network
-operations. Keep modules separated by responsibility. Use JSON for REST
-API communication.
-
-------------------------------------------------------------------------
-
-## 4. Suggested Backend Architecture
-
-``` text
+```text
 Client / Frontend
        |
        v
 Express API Gateway
-       |
-       +--> Request validation
-       |
-       +--> RSA-256 signature verification (where required)
-       |
-       +--> JWT authentication and authorization
-       |
-       +--> Tenant identification
-       |
+       |-- Request validation
+       |-- RSA-256 signature verification (where required)
+       |-- JWT authentication and authorization
+       |-- Tenant identification
        v
 Tenant Database Manager
-       |
-       +--> Tenant A MongoDB connection
-       +--> Tenant B MongoDB connection
-       +--> Tenant C MongoDB connection
-       |
+       |-- Tenant A MongoDB connection
+       |-- Tenant B MongoDB connection
+       |-- Tenant C MongoDB connection
        v
 Billing / Ledger Services
-       |
-       +--> Idempotency check
-       +--> Redis distributed lock
-       +--> MongoDB transaction
-       +--> Ledger and usage updates
-       |
+       |-- Idempotency check
+       |-- Redis distributed lock
+       |-- MongoDB transaction
+       |-- Ledger and usage updates
        v
 Analytics / Aggregation Services
        |
        v
-JSON API Response to Frontend
+JSON API Response
 ```
 
-The exact order of signature verification and authentication should be
-finalized with the API security contract. Never trust a tenant ID
-supplied only in an unverified request body or query parameter.
+> The order of signature verification and authentication must be finalized in the API security contract. Never trust a tenant ID that arrives only in an unverified request body or query parameter.
 
-------------------------------------------------------------------------
+---
 
-## 5. Suggested Folder Structure
+## 5. Folder Structure
 
-This is a proposed structure; adapt it to the team's existing repository
-conventions before creating duplicate folders.
+A proposed layout. Adapt it to the team's existing repository conventions before creating folders.
 
-``` text
+```text
 backend/
 ├── src/
 │   ├── config/
 │   │   ├── env.js
 │   │   ├── redis.js
 │   │   └── database.js
-│   │
 │   ├── controllers/
 │   │   ├── auth.controller.js
 │   │   ├── ledger.controller.js
 │   │   └── analytics.controller.js
-│   │
 │   ├── middleware/
 │   │   ├── authenticate.js
 │   │   ├── authorize.js
@@ -215,17 +153,14 @@ backend/
 │   │   ├── verifySignature.js
 │   │   ├── validateRequest.js
 │   │   └── errorHandler.js
-│   │
 │   ├── models/
 │   │   ├── ledger.model.js
 │   │   ├── billingEvent.model.js
 │   │   └── usageRecord.model.js
-│   │
 │   ├── routes/
 │   │   ├── auth.routes.js
 │   │   ├── ledger.routes.js
 │   │   └── analytics.routes.js
-│   │
 │   ├── services/
 │   │   ├── tenantConnection.service.js
 │   │   ├── ledger.service.js
@@ -233,19 +168,15 @@ backend/
 │   │   ├── lock.service.js
 │   │   ├── transaction.service.js
 │   │   └── analytics.service.js
-│   │
 │   ├── utils/
 │   │   ├── ApiError.js
 │   │   └── asyncHandler.js
-│   │
 │   ├── app.js
 │   └── server.js
-│
 ├── tests/
 │   ├── unit/
 │   ├── integration/
 │   └── fixtures/
-│
 ├── scripts/
 ├── docs/
 ├── .env.example
@@ -254,256 +185,185 @@ backend/
 └── README.md
 ```
 
-If the repository is a monorepo, keep the backend inside the agreed
-backend directory and do not move or rename shared project files without
-team agreement.
+In a monorepo, keep the backend inside the agreed directory and do not move or rename shared files without team agreement.
 
-------------------------------------------------------------------------
+---
 
 ## 6. Implementation Roadmap
 
-The project document defines a four-week backend plan. The tasks below
-translate those milestones into practical development steps.
+The tasks below translate the four-week project milestones into practical development steps.
 
-### Week 1 --- API Gateway and Dynamic Tenant Provisioning
+### Week 1: API Gateway and Dynamic Tenant Provisioning
 
-**Project milestone:** Build the API gateway for JWT decoding and
-implement runtime Mongoose connection switching for isolated tenant
-databases.
+**Milestone:** Build the API gateway for JWT decoding and implement runtime Mongoose connection switching for isolated tenant databases.
 
-#### Tasks
+**Tasks**
 
--   [ ] Inspect the existing repository, package manager, coding
-    conventions, and frontend integration needs.
--   [ ] Set up the Node.js and Express server.
--   [ ] Add environment configuration using `.env` and provide
-    `.env.example`.
--   [ ] Configure the base MongoDB/Mongoose setup.
--   [ ] Define how tenant identity is represented and validated.
--   [ ] Implement JWT verification middleware.
--   [ ] Implement tenant identification middleware using verified
-    identity/claims.
--   [ ] Build a tenant connection manager that selects the correct
-    database connection.
--   [ ] Implement connection caching and safe connection lifecycle
-    management.
--   [ ] Create initial tenant-aware schemas/models.
--   [ ] Add health-check and basic error-handling endpoints.
--   [ ] Test that Tenant A cannot access Tenant B's data.
+- [ ] Inspect the repository, package manager, coding conventions, and frontend needs
+- [ ] Set up the Node.js and Express server
+- [ ] Add environment configuration with `.env` and `.env.example`
+- [ ] Configure the base MongoDB and Mongoose setup
+- [ ] Define how tenant identity is represented and validated
+- [ ] Implement JWT verification middleware
+- [ ] Implement tenant identification middleware using verified claims
+- [ ] Build a tenant connection manager that selects the correct connection
+- [ ] Add connection caching and safe lifecycle management
+- [ ] Create initial tenant-aware schemas and models
+- [ ] Add a health-check endpoint and basic error handling
+- [ ] Test that Tenant A cannot access Tenant B's data
 
-#### How I will implement it
+**Approach**
 
-1.  Start with a small Express application and a central configuration
-    module.
-2.  Define the authentication contract with the team: token issuer,
-    signing/verification method, required claims, expiry, and tenant
-    claim.
-3.  Verify the token before using its tenant information.
-4.  Create a tenant connection service that maps an authenticated tenant
-    identifier to an approved database configuration.
-5.  Ensure every tenant-scoped query uses models/collections from the
-    selected tenant connection.
-6.  Add tests using at least two separate tenants and deliberately
-    attempt cross-tenant access.
+1. Start with a small Express app and a central configuration module.
+2. Agree the authentication contract with the team: issuer, verification method, required claims, expiry, and tenant claim.
+3. Verify the token before using any tenant information from it.
+4. Map the authenticated tenant to an approved, server-side database configuration.
+5. Ensure every tenant-scoped query uses models from the selected tenant connection.
+6. Test with at least two tenants and deliberately attempt cross-tenant access.
 
-**Week 1 output:** A running Express API with JWT-protected routes and
-verified tenant-specific database selection.
+**Output:** a running Express API with JWT-protected routes and verified tenant-specific database selection.
 
-**Do not:** Select a database using an arbitrary client-supplied
-database name or tenant ID without validating it against authenticated
-identity and server-side configuration.
+**Avoid:** selecting a database from a client-supplied database name or tenant ID without validating it against authenticated identity and server-side configuration.
 
-### Week 2 --- Idempotent Ledger and Transaction Safety
+---
 
-**Project milestone:** Structure Redis distributed locks and unique
-event IDs. Wrap ledger logic in MongoDB multi-document transactions.
+### Week 2: Idempotent Ledger and Transaction Safety
 
-#### Tasks
+**Milestone:** Structure Redis distributed locks and unique event IDs, and wrap ledger logic in MongoDB multi-document transactions.
 
--   [ ] Configure Redis connectivity.
--   [ ] Design billing event and ledger data models.
--   [ ] Decide the idempotency key/event ID contract with the team.
--   [ ] Add a unique database index for the appropriate tenant-scoped
-    event identifier.
--   [ ] Implement idempotency checks for repeated requests.
--   [ ] Implement Redis lock acquisition, expiry, and safe release.
--   [ ] Define the critical section for each billing operation.
--   [ ] Use MongoDB sessions and multi-document transactions for related
-    writes.
--   [ ] Handle transaction failure and rollback paths.
--   [ ] Return consistent success, duplicate, conflict, and failure
-    responses.
--   [ ] Test simultaneous requests with the same idempotency key.
+**Tasks**
 
-#### How I will implement it
+- [ ] Configure Redis connectivity
+- [ ] Design billing event and ledger data models
+- [ ] Agree the idempotency key / event ID contract with the team
+- [ ] Add a unique, tenant-scoped database index for the event identifier
+- [ ] Implement idempotency checks for repeated requests
+- [ ] Implement Redis lock acquisition, expiry, and safe release
+- [ ] Define the critical section for each billing operation
+- [ ] Use MongoDB sessions and transactions for related writes
+- [ ] Handle transaction failure and rollback paths
+- [ ] Return consistent success, duplicate, conflict, and failure responses
+- [ ] Test simultaneous requests that share an idempotency key
 
-1.  Require a stable idempotency key or unique event ID for operations
-    that must not be applied twice.
-2.  Scope uniqueness correctly to the tenant and operation as required
-    by the data model.
-3.  Check/record idempotency in a way that remains safe under concurrent
-    requests; a unique database constraint is an important final
-    safeguard.
-4.  Use a Redis lock with a bounded expiry and a unique lock-owner
-    token. Release only a lock owned by the current operation.
-5.  Perform all related MongoDB writes in one transaction/session where
-    supported by the deployment.
-6.  On failure, abort the transaction and release the lock safely.
-7.  Test retries, concurrent duplicates, timeouts, and failures between
-    writes.
+**Approach**
 
-**Week 2 output:** A ledger flow that prevents duplicate processing and
-keeps related database writes consistent.
+1. Require a stable idempotency key or event ID for operations that must not be applied twice.
+2. Scope uniqueness to the tenant and operation as the data model requires.
+3. Keep idempotency checks safe under concurrency. The unique database constraint is the final safeguard.
+4. Use a Redis lock with a bounded expiry and a unique owner token, and release only a lock the current operation owns.
+5. Perform all related writes in a single transaction where the deployment supports it.
+6. On failure, abort the transaction and release the lock safely.
+7. Test retries, concurrent duplicates, timeouts, and failures between writes.
 
-**Important implementation note:** Redis locks alone do not guarantee
-exactly-once billing. Use database uniqueness and transaction-safe
-idempotency as well. MongoDB multi-document transactions require a
-transaction-capable deployment, such as a replica set or supported
-sharded cluster; verify the development environment early.
+**Output:** a ledger flow that prevents duplicate processing and keeps related writes consistent.
 
-### Mid-Project Review --- Isolation Audit
+> **Important:** Redis locks alone do not guarantee exactly-once billing. Combine them with database uniqueness and transaction-safe idempotency. MongoDB multi-document transactions require a replica set or supported sharded cluster, so verify the development environment early.
 
-The project document requires an isolation audit and mock trace tests
-showing fast database switching under load.
+---
 
--   [ ] Present the tenant routing and database connection architecture.
--   [ ] Demonstrate that two tenants remain isolated.
--   [ ] Show connection selection/switching traces under load.
--   [ ] Demonstrate duplicate-request protection.
--   [ ] Demonstrate a failed transaction and rollback.
--   [ ] Record test setup, results, and issues.
--   [ ] Review findings with the mentor/team and update the plan.
+### Mid-Project Review: Isolation Audit
 
-### Week 3 --- Analytics Pipeline
+The project requires an isolation audit and mock trace tests showing fast database switching under load.
 
-**Project milestone:** Design MongoDB aggregation queries to return
-real-time usage cost metrics over historical time scopes.
+- [ ] Present the tenant routing and connection architecture
+- [ ] Demonstrate that two tenants remain isolated
+- [ ] Show connection selection and switching traces under load
+- [ ] Demonstrate duplicate-request protection
+- [ ] Demonstrate a failed transaction and its rollback
+- [ ] Record test setup, results, and open issues
+- [ ] Review findings with the mentor and team, then update the plan
 
-#### Tasks
+---
 
--   [ ] Agree on the usage, cost, and time-range definitions with the
-    team.
--   [ ] Confirm which billing/usage records are the source of truth.
--   [ ] Design tenant-scoped aggregation pipelines.
--   [ ] Add appropriate indexes for tenant and time-based queries.
--   [ ] Implement analytics service functions.
--   [ ] Create API endpoints for dashboard metrics.
--   [ ] Support agreed historical ranges and filters.
--   [ ] Validate aggregation output against known sample records.
--   [ ] Test performance and ensure tenant filtering is applied
-    throughout.
+### Week 3: Analytics Pipeline
 
-#### How I will implement it
+**Milestone:** Design MongoDB aggregation queries that return usage and cost metrics over historical time scopes.
 
-1.  Confirm the metric definitions and response fields with the frontend
-    developer.
-2.  Filter by the authenticated tenant before calculating metrics.
-3.  Use MongoDB aggregation stages such as `$match`, `$group`,
-    `$project`, and date grouping where appropriate.
-4.  Add indexes based on actual query patterns, for example tenant
-    identifier plus event timestamp.
-5.  Compare API results with manually calculated sample data.
-6.  Measure query performance and tune indexes/pipelines based on
-    explain plans and realistic data.
+**Tasks**
 
-**Week 3 output:** Tenant-safe analytics APIs that return usage and cost
-metrics for the dashboard.
+- [ ] Agree usage, cost, and time-range definitions with the team
+- [ ] Confirm which billing and usage records are the source of truth
+- [ ] Design tenant-scoped aggregation pipelines
+- [ ] Add indexes for tenant and time-based queries
+- [ ] Implement analytics service functions
+- [ ] Create API endpoints for dashboard metrics
+- [ ] Support the agreed historical ranges and filters
+- [ ] Validate aggregation output against known sample records
+- [ ] Test performance and confirm tenant filtering throughout
 
-### Week 4 --- RSA-256 Security, Trace Logging, Testing, and Deployment
+**Approach**
 
-**Project milestone:** Lock endpoints using RSA-256 validation. Conduct
-end-to-end trace logging and secure deployments.
+1. Confirm metric definitions and response fields with the frontend developer.
+2. Filter by the authenticated tenant before calculating any metric.
+3. Use aggregation stages such as `$match`, `$group`, `$project`, and date grouping as appropriate.
+4. Add indexes based on real query patterns, for example tenant identifier plus event timestamp.
+5. Compare API results with manually calculated sample data.
+6. Measure performance and tune indexes and pipelines using explain plans and realistic data.
 
-#### Tasks
+**Output:** tenant-safe analytics APIs that return usage and cost metrics for the dashboard.
 
--   [ ] Agree on the RSA signature format and canonical payload format.
--   [ ] Configure public-key verification and secure key management.
--   [ ] Implement signature validation middleware for the endpoints that
-    require it.
--   [ ] Reject invalid, malformed, or tampered signatures.
--   [ ] Define timestamp/nonce handling if replay protection is part of
-    the agreed protocol.
--   [ ] Review JWT authorization and tenant-isolation rules.
--   [ ] Avoid logging secrets, private keys, tokens, or sensitive
-    billing data.
--   [ ] Add request/trace identifiers for debugging.
--   [ ] Complete unit and integration tests using Jest and Supertest.
--   [ ] Test transaction rollback, duplicate requests, and cross-tenant
-    access.
--   [ ] Prepare environment variables and deployment configuration.
--   [ ] Document setup, APIs, test commands, and known limitations.
--   [ ] Prepare the final backend demonstration.
+---
 
-#### How I will implement it
+### Week 4: RSA-256 Security, Trace Logging, Testing, and Deployment
 
-1.  Obtain the public-key and signing requirements from the project/team
-    contract. Never invent a signature format.
-2.  Use Node.js cryptographic APIs or an approved library to verify
-    signatures using the public key.
-3.  Ensure the exact bytes/canonical representation being verified are
-    agreed by both client and server.
-4.  Keep private keys and secrets out of source control.
-5.  Add negative tests for invalid signatures, expired/replayed requests
-    where applicable, and tampered payloads.
-6.  Run the complete test suite and document the results.
+**Milestone:** Lock endpoints with RSA-256 validation, conduct end-to-end trace logging, and prepare a secure deployment.
 
-**Week 4 output:** A tested, documented, and securely configured backend
-ready for final review and integration.
+**Tasks**
 
-------------------------------------------------------------------------
+- [ ] Agree the RSA signature format and canonical payload format
+- [ ] Configure public-key verification and secure key management
+- [ ] Implement signature validation middleware for the protected endpoints
+- [ ] Reject invalid, malformed, or tampered signatures
+- [ ] Define timestamp and nonce handling if replay protection is part of the protocol
+- [ ] Review JWT authorization and tenant-isolation rules
+- [ ] Avoid logging secrets, private keys, tokens, or sensitive billing data
+- [ ] Add request and trace identifiers for debugging
+- [ ] Complete unit and integration tests with Jest and Supertest
+- [ ] Test rollback, duplicate requests, and cross-tenant access
+- [ ] Prepare environment variables and deployment configuration
+- [ ] Document setup, APIs, test commands, and known limitations
+- [ ] Prepare the final backend demonstration
+
+**Approach**
+
+1. Obtain public-key and signing requirements from the project contract. Do not invent a signature format.
+2. Verify signatures with Node.js cryptographic APIs or an approved library.
+3. Ensure client and server agree on the exact bytes or canonical form being signed.
+4. Keep private keys and secrets out of source control.
+5. Add negative tests for invalid signatures, expired or replayed requests where applicable, and tampered payloads.
+6. Run the full test suite and document the results.
+
+**Output:** a tested, documented, securely configured backend ready for final review and integration.
+
+---
 
 ## 7. Proposed API Contract
 
-The project brief does not prescribe exact endpoint names, request
-fields, or response schemas. The following is a **starting proposal** to
-discuss with the team and finalize before implementation.
+The project brief does not prescribe endpoint names or schemas. The following is a **starting proposal** to agree with the team before implementation.
 
-  ---------------------------------------------------------------------------
-  Method                  Proposed endpoint           Purpose
-  ----------------------- --------------------------- -----------------------
-  GET                     `/api/health`               Check server health.
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/health` | Check server health |
+| GET | `/api/auth/me` | Return the authenticated user and tenant context |
+| POST | `/api/ledger/entries` | Submit a billing or ledger operation with an idempotency key |
+| GET | `/api/ledger/entries` | List the authenticated tenant's ledger entries |
+| GET | `/api/ledger/entries/:id` | Retrieve one tenant-scoped ledger entry |
+| GET | `/api/analytics/usage` | Return usage metrics for an agreed time range |
+| GET | `/api/analytics/costs` | Return cost metrics for an agreed time range |
 
-  GET                     `/api/auth/me`              Return authenticated
-                                                      user and tenant
-                                                      context.
+### Design rules
 
-  POST                    `/api/ledger/entries`       Submit a billing/ledger
-                                                      operation with an
-                                                      idempotency key.
+- Authenticate every protected route.
+- Take tenant identity from verified authentication context, never from an untrusted client field.
+- Validate request bodies, parameters, and query strings.
+- Use consistent HTTP status codes and JSON response shapes.
+- Never expose connection details, secrets, stack traces, or another tenant's records.
+- Define pagination, sorting, date ranges, and filtering with the frontend developer.
+- Document required headers: authorization, signature, and idempotency where applicable.
 
-  GET                     `/api/ledger/entries`       Retrieve the
-                                                      authenticated tenant's
-                                                      ledger entries.
+### Example response (illustrative)
 
-  GET                     `/api/ledger/entries/:id`   Retrieve one
-                                                      tenant-scoped ledger
-                                                      entry.
-
-  GET                     `/api/analytics/usage`      Return usage metrics
-                                                      for an agreed time
-                                                      range.
-
-  GET                     `/api/analytics/costs`      Return cost metrics for
-                                                      an agreed time range.
-  ---------------------------------------------------------------------------
-
-### API design rules
-
--   All protected routes must authenticate the caller.
--   Tenant identity must come from verified authentication context, not
-    an untrusted client field.
--   Validate request bodies, parameters, and query strings.
--   Use consistent HTTP status codes and JSON response shapes.
--   Do not expose database connection details, secrets, stack traces, or
-    another tenant's records.
--   Define pagination, sorting, date range, and filtering behavior with
-    the frontend developer.
--   Document required headers, including authorization, signature, and
-    idempotency headers where applicable.
-
-### Example response shape (proposal)
-
-``` json
+```json
 {
   "success": true,
   "message": "Ledger entry processed",
@@ -514,228 +374,161 @@ discuss with the team and finalize before implementation.
 }
 ```
 
-This is illustrative only. Final field names and statuses must be agreed
-with the frontend and project team.
+Final field names and statuses must be agreed with the frontend and project team.
 
-------------------------------------------------------------------------
+---
 
 ## 8. Data Model Planning
 
-The project document requires tenant isolation and a reliable billing
-ledger, but it does not define final schemas. The following are planning
-considerations, not finalized models.
+The project requires tenant isolation and a reliable billing ledger but does not define final schemas. These are planning considerations only.
 
-### Billing event
-
-Potential fields:
-
--   Tenant-scoped event identifier
--   Idempotency key
--   Event type
--   Amount and currency
--   Event timestamp
--   Processing status
--   Reference/metadata needed for audit and reconciliation
-
-### Ledger entry
-
-Potential fields:
-
--   Entry identifier
--   Tenant context
--   Related billing event identifier
--   Debit/credit or transaction direction, as defined by the billing
-    rules
--   Amount and currency
--   Created timestamp
--   Transaction/reference status
-
-### Usage record
-
-Potential fields:
-
--   Tenant context
--   Resource or usage category
--   Quantity and unit
--   Recorded timestamp
--   Pricing reference or calculated cost, according to agreed business
-    rules
+| Model | Potential fields |
+|---|---|
+| **Billing event** | Tenant-scoped event ID, idempotency key, event type, amount and currency, event timestamp, processing status, audit and reconciliation metadata |
+| **Ledger entry** | Entry ID, tenant context, related billing event ID, debit/credit direction per billing rules, amount and currency, created timestamp, transaction status |
+| **Usage record** | Tenant context, resource or usage category, quantity and unit, recorded timestamp, pricing reference or calculated cost per agreed business rules |
 
 ### Database rules
 
--   Add indexes for real query patterns.
--   Enforce uniqueness for idempotency/event identifiers at the database
-    level.
--   Keep tenant scoping consistent in reads, writes, updates, and
-    deletes.
--   Avoid trusting tenant identifiers from request payloads.
--   Decide retention, audit, and reconciliation requirements with the
-    mentor/team.
+- Add indexes for real query patterns.
+- Enforce uniqueness of idempotency and event identifiers at the database level.
+- Apply tenant scoping consistently to reads, writes, updates, and deletes.
+- Never trust tenant identifiers from request payloads.
+- Decide retention, audit, and reconciliation requirements with the mentor and team.
 
-------------------------------------------------------------------------
+---
 
 ## 9. Security Checklist
 
--   [ ] Verify JWT signatures and expiry.
--   [ ] Validate authorization and tenant claims.
--   [ ] Apply tenant isolation to every tenant-scoped operation.
--   [ ] Never accept arbitrary database names from clients.
--   [ ] Validate RSA-256 signatures on the agreed protected routes.
--   [ ] Store secrets and keys in environment/secret-management systems.
--   [ ] Commit `.env.example`, never the real `.env`.
--   [ ] Validate and sanitize all incoming data.
--   [ ] Use safe Redis lock ownership, expiry, and release behavior.
--   [ ] Enforce database-level uniqueness for idempotency.
--   [ ] Use MongoDB transactions for related ledger writes.
--   [ ] Avoid logging tokens, keys, passwords, or sensitive billing
-    details.
--   [ ] Return safe error messages without internal implementation
-    details.
--   [ ] Test cross-tenant access attempts and invalid authentication.
+- [ ] Verify JWT signatures and expiry
+- [ ] Validate authorization and tenant claims
+- [ ] Apply tenant isolation to every tenant-scoped operation
+- [ ] Never accept arbitrary database names from clients
+- [ ] Validate RSA-256 signatures on the agreed protected routes
+- [ ] Store secrets and keys in environment variables or a secret manager
+- [ ] Commit `.env.example`, never the real `.env`
+- [ ] Validate and sanitize all incoming data
+- [ ] Use safe Redis lock ownership, expiry, and release
+- [ ] Enforce database-level uniqueness for idempotency
+- [ ] Use MongoDB transactions for related ledger writes
+- [ ] Avoid logging tokens, keys, passwords, or sensitive billing details
+- [ ] Return safe errors without internal implementation details
+- [ ] Test cross-tenant access attempts and invalid authentication
 
-------------------------------------------------------------------------
+---
 
 ## 10. Testing and Performance Validation
 
-The project brief calls for Jest and Supertest and sets performance
-expectations, including sub-5ms database index queries. Treat the
-performance target as a benchmark to measure and report under a
-documented test setup, not as an assumed result.
+The project calls for Jest and Supertest and sets performance expectations, including sub-5 ms indexed database queries. Treat these as benchmarks to measure and report under a documented setup, not as assumed results.
 
 ### Unit tests
 
--   JWT and tenant middleware behavior.
--   Tenant connection selection.
--   Idempotency service behavior.
--   Redis lock ownership and release logic.
--   Signature verification.
--   Analytics aggregation transformations.
+- JWT and tenant middleware behavior
+- Tenant connection selection
+- Idempotency service behavior
+- Redis lock ownership and release
+- Signature verification
+- Analytics aggregation transformations
 
 ### Integration tests
 
--   API authentication and authorization.
--   Tenant A and Tenant B data isolation.
--   Ledger creation and retrieval.
--   Duplicate event submission.
--   Concurrent requests with the same idempotency key.
--   MongoDB transaction commit and rollback.
--   Redis unavailable/timeout behavior.
--   Invalid or tampered RSA-signed requests.
--   Analytics results for known sample data.
+- API authentication and authorization
+- Tenant A and Tenant B data isolation
+- Ledger creation and retrieval
+- Duplicate event submission
+- Concurrent requests with the same idempotency key
+- MongoDB transaction commit and rollback
+- Redis unavailable or timeout behavior
+- Invalid or tampered RSA-signed requests
+- Analytics results against known sample data
 
-### Example test scenarios
+### Key scenarios
 
-  -----------------------------------------------------------------------
-  Scenario                            Expected result
-  ----------------------------------- -----------------------------------
-  Valid token for Tenant A            Request uses Tenant A context.
-
-  Tenant A requests Tenant B record   Access is denied or record is not
-                                      found, according to the API policy.
-
-  Same billing event submitted twice  It is not applied twice.
-
-  Two simultaneous requests use the   Only one logical operation is
-  same key                            committed.
-
-  A transaction fails midway          Related MongoDB writes are rolled
-                                      back.
-
-  Invalid signature                   Protected request is rejected.
-
-  Analytics request omits tenant      Request is rejected.
-  context                             
-  -----------------------------------------------------------------------
+| Scenario | Expected result |
+|---|---|
+| Valid token for Tenant A | Request uses Tenant A context |
+| Tenant A requests a Tenant B record | Access denied or record not found, per API policy |
+| Same billing event submitted twice | Applied only once |
+| Two simultaneous requests share a key | Only one logical operation is committed |
+| A transaction fails midway | All related writes are rolled back |
+| Invalid signature | Protected request is rejected |
+| Analytics request lacks tenant context | Request is rejected |
 
 ### Performance evidence to collect
 
--   Query latency and explain-plan/index evidence.
--   API throughput and latency under concurrent requests.
--   Redis lock contention and timeout behavior.
--   Tenant connection switching behavior under load.
--   Test data volume, environment, and benchmark commands.
+- Query latency with explain-plan and index evidence
+- API throughput and latency under concurrent load
+- Redis lock contention and timeout behavior
+- Tenant connection switching under load
+- Test data volume, environment, and benchmark commands
 
-Do not claim a benchmark has passed until it has actually been run and
-its result recorded.
+> Do not report a benchmark as passed until it has been run and the result recorded.
 
-------------------------------------------------------------------------
+---
 
 ## 11. Git Workflow
 
-I have already created the `backend` branch. I will use it for backend
-implementation and avoid committing directly to the shared main branch.
+Backend work happens on the `backend` branch. Avoid committing directly to the shared main branch.
 
 ### Initial checks
 
-``` bash
+```bash
 git status
 git branch
 git switch backend
 git pull origin backend
 ```
 
-If the remote branch does not exist yet, coordinate with the team before
-pushing it.
+If the remote branch does not exist yet, coordinate with the team before pushing it.
 
 ### Commit workflow
 
-``` bash
+```bash
 git add .
 git commit -m "feat(backend): add Express server setup"
 git push origin backend
 ```
 
-Use small, meaningful commits. Suggested commit prefixes:
+Use small, meaningful commits with these prefixes:
 
--   `feat:` new backend functionality
--   `fix:` bug fixes
--   `test:` tests
--   `refactor:` code restructuring without intended behavior change
--   `docs:` documentation
--   `chore:` tooling/configuration
+| Prefix | Use for |
+|---|---|
+| `feat:` | New backend functionality |
+| `fix:` | Bug fixes |
+| `test:` | Tests |
+| `refactor:` | Restructuring without behavior change |
+| `docs:` | Documentation |
+| `chore:` | Tooling and configuration |
 
 ### Before opening a pull request
 
--   [ ] Pull/rebase the latest agreed base branch.
--   [ ] Run linting and tests.
--   [ ] Check that `.env` and private keys are not staged.
--   [ ] Review the diff for unrelated changes.
--   [ ] Explain the feature, test evidence, and any known limitations.
--   [ ] Request review from the assigned teammate/mentor.
+- [ ] Pull or rebase the latest agreed base branch
+- [ ] Run linting and tests
+- [ ] Confirm `.env` and private keys are not staged
+- [ ] Review the diff for unrelated changes
+- [ ] Describe the feature, test evidence, and known limitations
+- [ ] Request review from the assigned teammate or mentor
 
-Coordinate the target branch and merge strategy with the repository
-owner. Do not force-push shared branches or overwrite teammates' work.
+Agree the target branch and merge strategy with the repository owner. Never force-push shared branches or overwrite teammates' work.
 
-------------------------------------------------------------------------
+---
 
-## 12. Local Setup --- Planned Instructions
+## 12. Local Setup
 
-The exact commands depend on the repository's existing package manager
-and scripts. Once the backend package is created, document the verified
-commands here.
+Exact commands depend on the repository's package manager and scripts. Replace this section with verified commands once the backend package exists.
 
-Typical setup sequence:
-
-``` bash
-# Move into the backend directory
+```bash
 cd backend
-
-# Install dependencies using the repository's chosen package manager
 npm install
-
-# Create a local environment file from the example
 cp .env.example .env
-
-# Start the development server (after the script is configured)
 npm run dev
 ```
 
 ### Environment variables
 
-Create `.env.example` with variable names and safe placeholders only.
-Confirm exact names and formats during implementation.
+Commit `.env.example` with names and safe placeholders only. Confirm exact names and formats during implementation.
 
-``` dotenv
+```dotenv
 NODE_ENV=development
 PORT=5000
 
@@ -753,169 +546,131 @@ JWT_AUDIENCE=
 # RSA request-signature verification
 RSA_PUBLIC_KEY=
 
-# Optional: only if the agreed tenant architecture uses a registry/configuration store
+# Optional: only if the tenant architecture uses a registry or configuration store
 TENANT_REGISTRY_URI=
 ```
 
-Do not commit real credentials, tokens, private keys, production
-database URIs, or populated secret files. If the JWT design uses a
-shared secret rather than an asymmetric key, document the actual agreed
-configuration instead of keeping unused variables.
+Never commit real credentials, tokens, private keys, production database URIs, or populated secret files. If the JWT design uses a shared secret instead of an asymmetric key, document the actual configuration and remove unused variables.
 
-------------------------------------------------------------------------
+---
 
-## 13. Frontend Integration Responsibilities
+## 13. Frontend Integration
 
-I will coordinate with the frontend developer before finalizing APIs.
+Coordinate with the frontend developer before finalizing APIs. Agree on:
 
-We need to agree on:
+- Authentication method and token format
+- How tenant context is established
+- Required request headers
+- RSA signature requirements, if the client signs requests
+- Ledger request and response fields
+- Idempotency key generation and retry behavior
+- Analytics filters, date ranges, and response formats
+- Loading, validation, authorization, conflict, and server error responses
+- CORS and local development URLs
 
--   Authentication method and token format.
--   How tenant context is established.
--   Required request headers.
--   RSA signature requirements, if the frontend/client signs requests.
--   Ledger request and response fields.
--   Idempotency key generation and retry behavior.
--   Analytics filters, date ranges, and response formats.
--   Loading, validation, authorization, conflict, and server error
-    responses.
--   CORS and local development URLs.
+Share API examples and endpoint changes early, and never change response fields without notifying the frontend developer.
 
-Share API examples and endpoint changes early. Avoid changing response
-fields without notifying the frontend developer.
-
-------------------------------------------------------------------------
+---
 
 ## 14. Deliverables and Review Preparation
 
-The assignment letter asks for source code, project documentation,
-project report, presentation, model evaluation results if applicable,
-and a final project demonstration if applicable.
-
 ### Backend deliverables
 
--   [ ] Working backend source code.
--   [ ] Express API and middleware.
--   [ ] Tenant-aware database connection management.
--   [ ] Billing/ledger and idempotency implementation.
--   [ ] Redis locking and MongoDB transaction handling.
--   [ ] Analytics aggregation APIs.
--   [ ] RSA-256 request validation as agreed.
--   [ ] Jest/Supertest test suite.
--   [ ] `.env.example` and setup documentation.
--   [ ] API documentation and frontend integration notes.
--   [ ] Test and performance evidence.
--   [ ] Backend architecture explanation for the review.
--   [ ] Final demonstration of tenant isolation and safe billing
-    behavior.
+- [ ] Working backend source code
+- [ ] Express API and middleware
+- [ ] Tenant-aware database connection management
+- [ ] Billing, ledger, and idempotency implementation
+- [ ] Redis locking and MongoDB transaction handling
+- [ ] Analytics aggregation APIs
+- [ ] RSA-256 request validation as agreed
+- [ ] Jest and Supertest test suite
+- [ ] `.env.example` and setup documentation
+- [ ] API documentation and frontend integration notes
+- [ ] Test and performance evidence
+- [ ] Backend architecture explanation for the reviews
+- [ ] Final demonstration of tenant isolation and safe billing behavior
 
-### Mid-project review
+### Mid-project review: be ready to explain
 
-Be ready to demonstrate:
+1. How the API identifies a tenant
+2. How requests select the correct database connection
+3. How isolation is enforced
+4. How duplicate requests are detected
+5. How Redis locks and MongoDB transactions work together
+6. What happens when a transaction fails
 
-1.  How the API identifies a tenant.
-2.  How requests select the correct database connection.
-3.  How isolation is enforced.
-4.  How duplicate requests are detected.
-5.  How Redis locks and MongoDB transactions work together.
-6.  What happens when a transaction fails.
+### Final review: be ready to demonstrate
 
-### Final review
+1. Secure JWT and RSA-256 validation
+2. Tenant isolation
+3. Idempotent ledger operations
+4. Transaction rollback
+5. Usage and cost analytics
+6. Test coverage and measured performance
+7. Setup and API documentation
 
-Be ready to demonstrate:
-
-1.  Secure JWT and RSA-256 validation.
-2.  Tenant isolation.
-3.  Idempotent ledger operations.
-4.  Transaction rollback.
-5.  Usage and cost analytics.
-6.  Test coverage and measured performance.
-7.  Setup and API documentation.
-
-------------------------------------------------------------------------
+---
 
 ## 15. Working Principles
 
--   Read the existing repository before changing its structure.
--   Confirm requirements and API contracts with the team/mentor.
--   Implement one module at a time and test it before integration.
--   Keep controllers thin; put business logic in services.
--   Keep database access and tenant connection selection centralized.
--   Use clear validation and centralized error handling.
--   Do not use `any` as a shortcut if the repository uses strict
-    TypeScript.
--   Keep code modular and maintainable.
--   Write tests for both successful and failure paths.
--   Update documentation when behavior or API contracts change.
--   Send periodic progress updates to the assigned mentor.
--   Keep confidential project information and credentials secure.
+- Read the existing repository before changing its structure.
+- Confirm requirements and API contracts with the team and mentor.
+- Implement one module at a time and test it before integration.
+- Keep controllers thin and business logic in services.
+- Centralize database access and tenant connection selection.
+- Use clear validation and centralized error handling.
+- Write tests for both success and failure paths.
+- Update documentation whenever behavior or API contracts change.
+- Send periodic progress updates to the assigned mentor.
+- Keep confidential project information and credentials secure.
 
-------------------------------------------------------------------------
+---
 
 ## 16. Progress Tracker
 
-Update this section as work is completed.
+Update as work is completed.
 
-  Milestone                             Status        Notes / evidence
-  ------------------------------------- ------------- ------------------
-  Repository and backend setup          Not started   
-  Express server and configuration      Not started   
-  JWT authentication                    Not started   
-  Tenant identification and isolation   Not started   
-  Dynamic Mongoose connection manager   Not started   
-  Billing and ledger schemas            Not started   
-  Idempotency and unique constraints    Not started   
-  Redis distributed locks               Not started   
-  MongoDB transactions and rollback     Not started   
-  Mid-project isolation review          Not started   
-  Analytics aggregation APIs            Not started   
-  RSA-256 signature validation          Not started   
-  Unit and integration tests            Not started   
-  Performance testing and evidence      Not started   
-  Frontend integration                  Not started   
-  Documentation and final demo          Not started   
+| Milestone | Status | Notes / Evidence |
+|---|---|---|
+| Repository and backend setup | ⬜ Not started | |
+| Express server and configuration | ⬜ Not started | |
+| JWT authentication | ⬜ Not started | |
+| Tenant identification and isolation | ⬜ Not started | |
+| Dynamic Mongoose connection manager | ⬜ Not started | |
+| Billing and ledger schemas | ⬜ Not started | |
+| Idempotency and unique constraints | ⬜ Not started | |
+| Redis distributed locks | ⬜ Not started | |
+| MongoDB transactions and rollback | ⬜ Not started | |
+| Mid-project isolation review | ⬜ Not started | |
+| Analytics aggregation APIs | ⬜ Not started | |
+| RSA-256 signature validation | ⬜ Not started | |
+| Unit and integration tests | ⬜ Not started | |
+| Performance testing and evidence | ⬜ Not started | |
+| Frontend integration | ⬜ Not started | |
+| Documentation and final demo | ⬜ Not started | |
 
-------------------------------------------------------------------------
+---
 
-## 17. Important Scope Notes
+## 17. Scope Notes and Open Decisions
 
--   The project specification defines the main backend modules and
-    four-week milestones. It does **not** provide final API routes,
-    exact JWT claims, database schemas, pricing rules, RSA signature
-    format, or deployment provider. These must be agreed with the
-    mentor/team.
--   "Zero-knowledge" appears in the project title, but the supplied
-    project brief does not define a specific zero-knowledge proof
-    protocol or cryptographic data-privacy design. Do not claim that
-    such a protocol has been implemented unless it is separately
-    specified and built.
--   RSA-256 is the terminology used in the project brief. Confirm the
-    precise signature algorithm, padding, key format, and payload
-    canonicalization with the team before implementation.
--   Dynamic tenant database provisioning and connection switching must
-    be designed around the actual database hosting arrangement and
-    tenant registry.
--   MongoDB transaction support depends on deployment topology. Confirm
-    this before implementing the ledger transaction flow.
--   Performance goals must be measured and documented using reproducible
-    tests.
+The project specification defines the main backend modules and four-week milestones. It does **not** specify the items below, so each is an open decision to settle with the mentor and team.
 
-------------------------------------------------------------------------
+| Open decision | Notes |
+|---|---|
+| API routes and schemas | Section 7 is a proposal only |
+| JWT claims | Issuer, audience, tenant claim, expiry |
+| Database schemas and pricing rules | Section 8 lists planning considerations only |
+| RSA-256 details | Exact algorithm, padding, key format, and payload canonicalization |
+| Deployment provider | Not specified |
+| Tenant provisioning | Must fit the actual database hosting arrangement and tenant registry |
+| MongoDB transaction support | Depends on deployment topology; confirm before building the ledger flow |
 
-## 18. Reference Documents
+**Other notes**
 
-This roadmap is based on the supplied project and assignment documents:
+- **"Zero-knowledge" terminology:** it appears in the project title, but the brief defines no zero-knowledge proof protocol or privacy design. Do not claim such a protocol is implemented unless it is separately specified and built.
+- **Performance goals:** must be measured and documented with reproducible tests.
 
-1.  **PROJECT.pdf** --- Project 3, "LedgerGuard: Dynamic Multi-Tenant
-    Zero-Knowledge Billing Engine," especially pages 4--6 for modules,
-    weekly milestones, technology stack, and evaluation standards.
-2.  **Assignment letter** --- Confirms the assigned project, internship
-    scope, expected deliverables, and performance evaluation criteria.
+---
 
-------------------------------------------------------------------------
 
-**Owner:** Backend Developer\
-**Working branch:** `backend`\
-**Project:** LedgerGuard\
-**Status:** Development roadmap --- update as implementation decisions
-are finalized.
+**Owner:** Backend Developer · **Working branch:** `bhavik-backend` · **Project:** LedgerGuard
