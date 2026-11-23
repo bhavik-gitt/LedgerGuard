@@ -673,4 +673,3 @@ The project specification defines the main backend modules and four-week milesto
 ---
 
 
-**Owner:** Backend Developer · **Working branch:** `bhavik-backend` · **Project:** LedgerGuard
