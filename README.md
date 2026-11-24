@@ -1,3 +1,14 @@
+<div align="center">
+
+# 🛡️ LedgerGuard
+
+### Multi-Tenant, Idempotent Billing Engine for Enterprise SaaS
+
+Strict tenant isolation · Exactly-once billing semantics · Cryptographically verified requests · Tenant-scoped analytics
+
+</div>
+
+---
 # LedgerGuard: Backend Development Roadmap
 
 | | |
