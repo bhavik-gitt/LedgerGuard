@@ -83,8 +83,6 @@ The backend developer owns the server-side implementation.
 | **Cryptographic Security** | Validate signed requests and payloads using RSA-256 |
 | **API Integration** | Agree on request and response contracts with the frontend developer |
 | **Testing** | Write unit, integration, security, and failure-case tests |
-| **Documentation** | Maintain setup instructions, environment variables, API docs, and progress notes |
-
 > **Boundary:** The frontend dashboard is outside primary backend ownership. The backend provides stable APIs and coordinates with the frontend developer on payload formats, authentication, and error handling.
 
 ---
