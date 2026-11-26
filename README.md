@@ -9,7 +9,7 @@ Strict tenant isolation · Exactly-once billing semantics · Cryptographically v
 </div>
 
 ---
-# LedgerGuard: Backend Development Roadmap
+# LedgerGuard: Backend Development
 
 | | |
 |---|---|
@@ -383,7 +383,6 @@ The project brief does not prescribe endpoint names or schemas. The following is
 }
 ```
 
-Final field names and statuses must be agreed with the frontend and project team.
 
 ---
 
