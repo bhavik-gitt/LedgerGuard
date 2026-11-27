@@ -673,11 +673,6 @@ The project specification defines the main backend modules and four-week milesto
 | Tenant provisioning | Must fit the actual database hosting arrangement and tenant registry |
 | MongoDB transaction support | Depends on deployment topology; confirm before building the ledger flow |
 
-**Other notes**
-
-- **"Zero-knowledge" terminology:** it appears in the project title, but the brief defines no zero-knowledge proof protocol or privacy design. Do not claim such a protocol is implemented unless it is separately specified and built.
-- **Performance goals:** must be measured and documented with reproducible tests.
-
 ---
 
 
